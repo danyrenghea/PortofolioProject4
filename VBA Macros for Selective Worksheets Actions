@@ -38,7 +38,7 @@ Sub CreateQuarterlyLog_Complete()
         Next monthName									
     Next ws									
 									
-    MsgBox "Logurile au fost inserate în foile relevante!", vbInformation									
+    MsgBox "The logos were inserted into the relevant worksheets!", vbInformation									
 End Sub									
 
 
