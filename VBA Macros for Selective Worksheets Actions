@@ -1,52 +1,46 @@
-Sub CreateQuarterlyLog()
-  
-  ' This VBA macro applies only to worksheets whose name matches
-  ' one of the months in the specified array
-  
-  Dim ws As Worksheet
-  Dim SheetName As Variant
-  Dim SheetNames As Variant
-  Dim lastRow As Long
-  Dim DataValue As Variant
-                                
-  ' The Data is going to be inserted
-  DataValue = Array("Date", "Client Name", "Contact Name", "Duration", "Notes:")
-                                
-'Worksheets Name
-  SheetNames = Array("January", "February", "March")
+Sub CreateQuarterlyLog_Complete()									
+									
+ 'Description of functionality: This VBA macro applies to every worksheet that									
+    'contains one of the month names in the specified array									
+									
+    Dim ws As Worksheet									
+    Dim lastRow As Long									
+    Dim DataValue As Variant									
+    Dim monthName As Variant									
+    									
+    ' The data that will be inserted									
+    DataValue = Array("Date", "Client Name", "Contact Name", "Duration", "Notes:")									
+    									
+    ' Go through all the worksheets in the workbook									
+    For Each ws In ThisWorkbook.Sheets									
+        ' Check if the worksheet name contains the desired terms									
+        For Each monthName In Array("January", "February", "March")									
+            If InStr(1, ws.Name, monthName, vbTextCompare) > 0 Then									
+                ' Find the last cell in column A									
+                lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row + 1									
+                									
+                ' Insert "LOG" abd apply the bold formating									
+                With ws.Cells(lastRow, 1).Offset(2, 0)									
+                    .Value = "LOG"									
+                    .Font.Bold = True									
+                    .Font.Size = 16									
+                End With									
+                									
+                ' Insert the data into the corresponding cells and apply bold formatting									
+                With ws.Range(ws.Cells(lastRow + 3, 1), ws.Cells(lastRow + 3, 5))									
+                    .Value = DataValue									
+                    .Font.Bold = True									
+                End With									
+                									
+                ' Move to the next worksheet									
+                Exit For									
+            End If									
+        Next monthName									
+    Next ws									
+									
+    MsgBox "Logurile au fost inserate în foile relevante!", vbInformation									
+End Sub									
 
-  ' Go through each sheet in the workbook
-  For Each SheetName In SheetNames
-        On Error Resume Next
-        Set ws = ThisWorkbook.Sheets(SheetName)
-        On Error GoTo 0
-                                        
-'Check if the worksheet exists
-        If Not ws Is Nothing Then
-            ' Activeaza foaia
-            ws.Activate
-                                
-'It finds the last empty cell in column A
-            lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row + 1
-                                
-            ' It inserts the "LOG" text and applies Bold formattting
-            ws.Cells(lastRow, 1).Offset(2, 0).Value = "LOG"
-            ws.Cells(lastRow, 1).Offset(2, 0).Font.Bold = True
-             ws.Cells(lastRow, 1).Offset(2, 0).Font.Size = 16
-            ' It inserts the data from DataValue în appropriate interval
-            ws.Range(ws.Cells(lastRow + 3, 1), ws.Cells(lastRow + 3, 5)).Value = DataValue
-            ws.Range(ws.Cells(lastRow + 3, 1), ws.Cells(lastRow + 3, 5)).Font.Bold = True
-                                
-           Else
-'If the worksheet doesn't exist, display an error message
-            MsgBox "Sheet '" & SheetName & "' not found!", vbExclamation, "Warning"
-        End If
-                                
-'We reset the ws object to prevent issues in the next iterations
-        Set ws = Nothing
-  Next SheetName
-
-End Sub
 
 
 Sub DuplicateSheetsInsertMonthlyLog()									
