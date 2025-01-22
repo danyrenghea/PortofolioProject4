@@ -1,0 +1,116 @@
+Option Explicit								
+Sub SortLastCol()								
+This macro does the sorting of the last column for each table we apply on								
+    Range("A1").Select								
+    ActiveCell.CurrentRegion.Select								
+Below we establish the instructions for sorting the data from the last column of the table								
+    Selection.Sort Key1:=Range("D1"), Order1:=xlDescending, Header:=xlGuess, _								
+    OrderCustom:=1, MatchCase:=False, Orientation:=xlTopToBottom, _								
+    DataOption1:=xlSortNormal								
+End Sub								
+
+Sub InsertHeaders()								
+    								
+Range("A1:D1").Value = Array("Symbol:", "Open:", "Close:", "Net Chg:")					
+							
+End Sub								
+
+Sub InsertFormatTxt()								
+    Range("A1").Value = "Our Global Company"								
+      								
+    Range("A2").Value = "Stock Prices"								
+       								
+    Range("B4").Value = ActiveSheet.Name								
+    Range("A1").Select								
+    With Selection.Font								
+        .Name = "Arial"								
+        .Size = 18								
+        .Bold = True								
+    End With								
+								
+    Range("A2").Select								
+    With Selection.Font								
+        .Name = "Arial"								
+        .Size = 14								
+        .Bold = True								
+    End With								
+    								
+    Range("B4").Select								
+    With Selection.Font								
+        .Name = "Arial"								
+        .Size = 14								
+        .Bold = True								
+    								
+    End With								
+    End Sub								
+
+
+Public Sub UniteDatasetsAllSheets()							
+Dim x As Integer							
+Dim sheettitle As String							
+Dim lastRow As Long							
+							
+Dim ws As Worksheet							
+Dim sheetExists As Boolean							
+sheetExists = False							
+							
+For Each ws In ThisWorkbook.Worksheets							
+    If ws.Name = "All Portfolios" Then							
+        sheetExists = True							
+        Exit For 'If the worksheet exists, exit the loop							
+    End If							
+Next ws							
+							
+' Add to the loop only if it exists.							
+If Not sheetExists Then							
+    ThisWorkbook.Worksheets.Add.Name = "All Portfolios"							
+End If							
+For x = 1 To Worksheets.Count - 2							
+    ' Excludes last two sheets in the workbook from processing							
+    If Worksheets(x).Name <> "All Portfolios" Then							
+        'Selects current sheet and gets the name of this one							
+        Worksheets(x).Select							
+        sheettitle = ActiveSheet.Name							
+                                    							
+        ' Selects the "All Portfolios" sheet							
+        Worksheets("All Portfolios").Select							
+                                    							
+        ' Finds the last cells unfilled from the column A							
+        lastRow = Cells(Rows.Count, 1).End(xlUp).Row + 1							
+                                    							
+        ' Inserts the name of the worksheet							
+        Cells(lastRow, 1).Value = sheettitle & " Portfolios"							
+        Cells(lastRow, 1).Font.Bold = True							
+        Cells(lastRow, 1).EntireRow.Insert Shift:=xlDown							
+        							
+                                    							
+        ' Comes back to the current sheet and fill de copyed data							
+        Worksheets(x).Select							
+        Columns("A:D").Select							
+        Call SortLastCol							
+        Selection.Columns.AutoFit							
+        Range("A1").CurrentRegion.Rows(1).EntireRow.Insert Shift:=xlDown							
+        Call InsertHeaders							
+        Range("A1").CurrentRegion.Copy							
+                                    							
+       'Comes back to "All Portfolios" and insert copyed data							
+        Worksheets("All Portfolios").Select							
+        Cells(lastRow + 3, 1).PasteSpecial Paste:=xlPasteValues							
+        Selection.Style = "Currency"							
+        'Format Headers in Table							
+        With Selection.Rows(1)							
+        .Font.Bold = True							
+        .Font.Name = "Arial"							
+        .Font.Size = 12							
+        Columns.AutoFit							
+        Worksheets(x).Rows("1:1").Delete Shift:=xlUp							
+       End With							
+  End If							
+							
+Next x							
+							
+Columns("A:A").Select							
+Selection.Insert Shift:=xlToRight							
+Range("B3:E2000").EntireRow.Resize(3).Insert Shift:=xlDown							
+Call InsertFormatTxt							
+End Sub							
