@@ -1,0 +1,161 @@
+Sub CreateQuarterlyLog()
+  
+  ' This VBA macro applies only to worksheets whose name matches
+  ' one of the months in the specified array
+  
+  Dim ws As Worksheet
+  Dim SheetName As Variant
+  Dim SheetNames As Variant
+  Dim lastRow As Long
+  Dim DataValue As Variant
+                                
+  ' The Data is going to be inserted
+  DataValue = Array("Date", "Client Name", "Contact Name", "Duration", "Notes:")
+                                
+'Worksheets Name
+  SheetNames = Array("January", "February", "March")
+
+  ' Go through each sheet in the workbook
+  For Each SheetName In SheetNames
+        On Error Resume Next
+        Set ws = ThisWorkbook.Sheets(SheetName)
+        On Error GoTo 0
+                                        
+'Check if the worksheet exists
+        If Not ws Is Nothing Then
+            ' Activeaza foaia
+            ws.Activate
+                                
+'It finds the last empty cell in column A
+            lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row + 1
+                                
+            ' It inserts the "LOG" text and applies Bold formattting
+            ws.Cells(lastRow, 1).Offset(2, 0).Value = "LOG"
+            ws.Cells(lastRow, 1).Offset(2, 0).Font.Bold = True
+             ws.Cells(lastRow, 1).Offset(2, 0).Font.Size = 16
+            ' It inserts the data from DataValue în appropriate interval
+            ws.Range(ws.Cells(lastRow + 3, 1), ws.Cells(lastRow + 3, 5)).Value = DataValue
+            ws.Range(ws.Cells(lastRow + 3, 1), ws.Cells(lastRow + 3, 5)).Font.Bold = True
+                                
+           Else
+'If the worksheet doesn't exist, display an error message
+            MsgBox "Sheet '" & SheetName & "' not found!", vbExclamation, "Warning"
+        End If
+                                
+'We reset the ws object to prevent issues in the next iterations
+        Set ws = Nothing
+  Next SheetName
+
+End Sub
+
+
+Sub DuplicateSheetsInsertMonthlyLog()									
+									
+'Description of functionality: This VBA macro creates duplicates of every selected worksheet in									
+'the workbook, depending on the user's chosen number as an option, and assigns the									
+'corresponding month names from the specified array to each duplicated worksheet.									
+									
+    Dim ws As Worksheet									
+    Dim copiedSheet As Worksheet									
+    Dim NewSheetName As String									
+    Dim Q1Months As Variant									
+    Dim i As Integer									
+    Dim region As Variant									
+    Dim SearchSheetContent As String									
+    Dim Message As String									
+    Dim SelectedSheets As Object									
+    Set SelectedSheets = CreateObject("Scripting.Dictionary")									
+    									
+    'Defining the message for the region selection									
+    Message = "Enter the region of your choice:" & vbCrLf & _									
+              "1 - Southeast" & vbCrLf & _									
+              "2 - Northeast" & vbCrLf & _									
+              "3 - Mid-west" & vbCrLf & _									
+              "4 - Southwest" & vbCrLf & _									
+              "5 - Northwest" & vbCrLf & _									
+              "6 - Far-west"									
+    									
+TryAgain:   ' Repeat in case of invalid input									
+    region = InputBox(Message, "Region", "Enter 1, 2, 3, 4, 5, or 6")									
+    									
+    ' Verifying if the user pressed Cancel									
+    If StrPtr(region) = 0 Then									
+        MsgBox "You pressed Cancel. Operation aborted!", vbExclamation, "Cancelled"									
+        Exit Sub									
+    End If									
+    									
+    ' Check for empty input									
+    If Trim(region) = "" Then									
+        MsgBox "You pressed OK but left the input empty.", vbInformation, "No Input"									
+        GoTo TryAgain									
+    End If									
+    									
+    ' Verifying whether the input is a valid number									
+    If Not IsNumeric(region) Or region < 1 Or region > 6 Then									
+        MsgBox "Invalid input. Please enter a number between 1 and 6.", vbCritical, "Error"									
+        GoTo TryAgain									
+    End If									
+    									
+    ' Convert to Integer									
+    region = CInt(region)									
+    									
+    ' Mapping the chosen region to a code									
+    Select Case region									
+        Case 1: SearchSheetContent = "SE"									
+        Case 2: SearchSheetContent = "NE"									
+        Case 3: SearchSheetContent = "MW"									
+        Case 4: SearchSheetContent = "SW"									
+        Case 5: SearchSheetContent = "NW"									
+        Case 6: SearchSheetContent = "FW"									
+    End Select									
+    									
+    ' We select the corresponding worksheets and store them in a dictionary.									
+    For Each ws In ThisWorkbook.Worksheets									
+        If InStr(1, ws.Name, SearchSheetContent, vbTextCompare) > 0 And ws.Name <> "Neutral" Then									
+            SelectedSheets.Add ws.Name, ws									
+        End If									
+    Next ws									
+    									
+    ' Verifying if the worksheets are selected									
+    If SelectedSheets.Count > 0 Then									
+        ' We define the months to be copied									
+        Q1Months = Array("January", "February", "March")									
+        									
+        'Go through each selected worksheet and copy it 3 times									
+        For Each Key In SelectedSheets.Keys 'We iterate through the dictionary keys									
+            Set ws = SelectedSheets(Key)  ' We access the stored worksheet object									
+            For i = 0 To UBound(Q1Months) 'We go through all the defined months									
+                ' New name for the copied worksheet									
+                NewSheetName = ws.Name & " - " & Q1Months(i)									
+                									
+                ' Delete the worksheet whether it already exists									
+                If SheetExists(NewSheetName) Then									
+                    Application.DisplayAlerts = False									
+                    ThisWorkbook.Sheets(NewSheetName).Delete									
+                    Application.DisplayAlerts = True									
+                End If									
+                									
+                ' Copy the worksheet									
+                ws.Copy After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count)									
+                Set copiedSheet = ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count)									
+                									
+                ' Rename the copied worksheet									
+                copiedSheet.Name = NewSheetName									
+            Next i									
+        Next Key									
+        									
+        MsgBox "Sheets copied and renamed successfully!", vbInformation, "Success"									
+    Else									
+        MsgBox "No sheets found for the selected region!", vbExclamation, "Warning"									
+    End If									
+Call CreateQuarterlyLog_Complete									
+									
+End Sub									
+									
+Function SheetExists(SheetName As String) As Boolean									
+    Dim ws As Worksheet									
+    On Error Resume Next									
+    Set ws = ThisWorkbook.Sheets(SheetName)									
+    SheetExists = Not ws Is Nothing									
+    On Error GoTo 0									
+End Function									
