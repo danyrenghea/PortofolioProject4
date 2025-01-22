@@ -1,0 +1,125 @@
+Private Sub Workbook_Open()			
+	    Call StartAutomationTimer			
+	End Sub						
+			
+
+
+Option Explicit 													
+													
+Public nextRunTime As Date													
+													
+    Sub StartAutomationTimer()													
+    'We set the timer to run the macro every 2 minutes													
+    nextRunTime = Now + TimeValue("00:02:00") ' 2 minutes interval													
+    Application.OnTime nextRunTime, "AutomateOrderAnalysis"													
+    End Sub													
+													
+Sub AutomateOrderAnalysis()													
+    Dim sourceFolder As String													
+    Dim targetFolder As String													
+    Dim processedFolder As String													
+    Dim fileName As String													
+    Dim newFileName As String													
+    Dim additionalWSName As String													
+    Dim ws As Worksheet													
+    Dim wsResult As Worksheet													
+    Dim summarySheetName As String													
+    Dim lastRow As Long													
+    Dim resultWorkbook As Workbook													
+													
+    ' Configurating of the source, target and processed folders													
+    sourceFolder = "D:\Source Data\"													
+    targetFolder = "D:\Target Data\"													
+    processedFolder = "D:\Processed Data\"													
+    													
+    ' Creating the target folder whether it doesn't exist													
+    If Dir(targetFolder, vbDirectory) = "" Then													
+        MkDir targetFolder													
+    End If													
+    													
+    ' Creating the folder for processed files whether it doesn't exist													
+    If Dir(processedFolder, vbDirectory) = "" Then													
+        MkDir processedFolder													
+    End If													
+    													
+    ' Detecting the gross files													
+    fileName = Dir(sourceFolder & "DataSourceOrders_*.xlsx")													
+    													
+    Do While fileName <> ""													
+        ' We extract the extra identifier from the file name 													
+        additionalWSName = Split(Split(fileName, "_")(1), ".")(0)													
+        													
+        ' We open the source file													
+        Workbooks.Open sourceFolder & fileName													
+        Set ws = ActiveWorkbook.Sheets(1) ' We suppose the table is in the first sheet													
+        													
+        ' We determine the last row of data													
+        lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row													
+        													
+        ' We create a new workbook for the target file													
+        Set resultWorkbook = Workbooks.Add													
+        summarySheetName = "Orders&TotalAmount_" & additionalWSName													
+        resultWorkbook.Sheets(1).Name = summarySheetName													
+        Set wsResult = resultWorkbook.Sheets(summarySheetName)													
+        													
+        ' We create a summary table with the orders number by client and the total amount by client													
+        wsResult.Cells(1, 1).Value = "Client"													
+        wsResult.Cells(1, 2).Value = "TotalOrders"													
+        wsResult.Cells(1, 3).Value = "TotalAmount"													
+        													
+        Dim dict As Object													
+        Set dict = CreateObject("Scripting.Dictionary")													
+        													
+        Dim i As Long													
+        Dim client As String													
+        Dim amount As Double													
+        													
+        ' We go through gross data for calculating the totals													
+        For i = 2 To lastRow ' Presupunem ca prima linie este cap de tabel													
+            client = ws.Cells(i, 1).Value													
+            amount = ws.Cells(i, 3).Value													
+            													
+            If Not dict.exists(client) Then													
+                dict.Add client, Array(1, amount) ' [Order's number, Total Amount]													
+            Else													
+                Dim tempArray As Variant													
+                tempArray = dict(client) ' We take over the existent values													
+                tempArray(0) = tempArray(0) + 1 ' We increment the number of the orders													
+                tempArray(1) = tempArray(1) + amount ' Adaugam suma comenzii curente													
+                dict(client) = tempArray ' We reatribute the updated array													
+            End If													
+        Next i													
+        													
+        ' We write the results in the new sheet													
+        Dim rowIndex As Long													
+        rowIndex = 2													
+        													
+        Dim key As Variant													
+        For Each key In dict.Keys													
+            wsResult.Cells(rowIndex, 1).Value = key													
+            wsResult.Cells(rowIndex, 2).Value = dict(key)(0)													
+            wsResult.Cells(rowIndex, 3).Value = dict(key)(1)													
+            rowIndex = rowIndex + 1													
+        Next key													
+        Columns.AutoFit													
+        ' We save the resulted file													
+        newFileName = "OrdersVolume&TotalAmount_" & additionalWSName & ".xlsm"													
+        													
+        ' We check and delete if the file name already exists in the target folder													
+        If Dir(targetFolder & newFileName) <> "" Then Kill targetFolder & newFileName													
+        'We save the file resulted after deletion													
+        resultWorkbook.SaveAs targetFolder & newFileName, FileFormat:=xlOpenXMLWorkbookMacroEnabled													
+        resultWorkbook.Close SaveChanges:=True													
+        													
+        'We close the source file without saving it													
+        Workbooks(fileName).Close SaveChanges:=False													
+        ' We check and delete whether the file already exists in the processed folder													
+        If Dir(processedFolder & fileName) <> "" Then Kill processedFolder & fileName													
+        ' We move the processed file in the folder for processed files													
+        Name sourceFolder & fileName As processedFolder & fileName													
+        													
+        ' We continue with the next file													
+        fileName = Dir													
+    Loop													
+  Call StartAutomationTimer													
+End Sub													
