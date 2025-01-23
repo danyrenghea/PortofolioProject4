@@ -1,0 +1,167 @@
+Sub CreateInsertQuarterlyLog(NewWorkbook As Workbook)								
+    Dim ws As Worksheet								
+    Dim lastRow As Long								
+    Dim DataValue As Variant								
+    Dim monthName As Variant								
+    Dim SheetNames As Variant								
+    								
+    ' The data that will be inserted								
+    DataValue = Array("Date", "Client Name", "Contact Name", "Duration", "Notes:")								
+    								
+    ' The list of the worksheets in which we want to insert data								
+    SheetNames = Array("January", "February", "March")								
+    								
+    ' Go through all the worksheets in the target workbook								
+    For Each ws In NewWorkbook.Sheets								
+        ' Check if the worksheet name contains one of the specified months								
+        For Each monthName In SheetNames								
+            If InStr(1, ws.Name, monthName, vbTextCompare) > 0 Then								
+                ' Find the last cell in column A								
+                lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row + 1								
+                								
+                ' Insert "LOG" and apply bold formatting								
+                With ws.Cells(lastRow, 1).Offset(2, 0)								
+                    .Value = "LOG"								
+                    .Font.Bold = True								
+                    .Font.Size = 16								
+                End With								
+                								
+                ' Insert the data into the corresponding cells and apply bold formatting								
+                With ws.Range(ws.Cells(lastRow + 3, 1), ws.Cells(lastRow + 3, 5))								
+                    .Value = DataValue								
+                    .Font.Bold = True								
+                End With								
+                								
+                ' Move to the next worksheet								
+                Exit For								
+            End If								
+        Next monthName								
+    Next ws								
+								
+    MsgBox "The Logs were inserted in the relevant worksheets", vbInformation								
+End Sub								
+
+Sub SaveDuplicateSheetsInsertMonthlyLog()													
+    Dim ws As Worksheet													
+    Dim copiedSheet As Worksheet													
+    Dim NewSheetName As String													
+    Dim Q1Months As Variant													
+    Dim i As Integer													
+    Dim region As Variant													
+    Dim SearchSheetContent As String													
+    Dim Message As String													
+    Dim SelectedSheets As Object													
+    Dim FilePath As String													
+    Dim FileName As String													
+    Dim FullFilePath As String													
+    Dim NewWorkbook As Workbook													
+    Dim Key As Variant													
+    Set SelectedSheets = CreateObject("Scripting.Dictionary")													
+    													
+    ' Defining the message for the region selection													
+    Message = "Enter the region of your choice:" & vbCrLf & _													
+              "1 - Southeast" & vbCrLf & _													
+              "2 - Northeast" & vbCrLf & _													
+              "3 - Mid-west" & vbCrLf & _													
+              "4 - Southwest" & vbCrLf & _													
+              "5 - Northwest" & vbCrLf & _													
+              "6 - Far-west"													
+    													
+TryAgain:													
+    region = InputBox(Message, "Region", "Enter 1, 2, 3, 4, 5, or 6")													
+    													
+    If StrPtr(region) = 0 Then													
+        MsgBox "You pressed Cancel. Operation aborted!", vbExclamation, "Cancelled"													
+        Exit Sub													
+    End If													
+    													
+    If Trim(region) = "" Then													
+        MsgBox "You pressed OK but left the input empty.", vbInformation, "No Input"													
+        GoTo TryAgain													
+    End If													
+    													
+    If Not IsNumeric(region) Or region < 1 Or region > 6 Then													
+        MsgBox "Invalid input. Please enter a number between 1 and 6.", vbCritical, "Error"													
+        GoTo TryAgain													
+    End If													
+    													
+    region = CInt(region)													
+    													
+    Select Case region													
+        Case 1: SearchSheetContent = "SE"													
+        Case 2: SearchSheetContent = "NE"													
+        Case 3: SearchSheetContent = "MW"													
+        Case 4: SearchSheetContent = "SW"													
+        Case 5: SearchSheetContent = "NW"													
+        Case 6: SearchSheetContent = "FW"													
+    End Select													
+  For Each ws In ThisWorkbook.Worksheets													
+    ' Check if the worksheet name începe exact cu denumirea regiunii													
+    If StrComp(Left(ws.Name, Len(SearchSheetContent)), SearchSheetContent, vbTextCompare) = 0 And ws.Name <> "Neutral" Then													
+        ' Add the worksheet in the list of the selected ones													
+        SelectedSheets.Add ws.Name, ws													
+    End If													
+Next ws													
+       													
+    If SelectedSheets.Count > 0 Then													
+        Q1Months = Array("January", "February", "March")													
+ 													
+        ' Create a new workbook to store the copied sheets													
+        Set NewWorkbook = Workbooks.Add													
+        													
+        ' Go through the selected sheets and copy them 3 times ( once for each month in the quarter) 													
+        For Each Key In SelectedSheets.Keys													
+            Set ws = SelectedSheets(Key)													
+            For i = 0 To UBound(Q1Months)													
+                NewSheetName = ws.Name & " - " & Q1Months(i)													
+                													
+                If SheetExists(NewSheetName) Then													
+                    Application.DisplayAlerts = False													
+                    ThisWorkbook.Sheets(NewSheetName).Delete													
+                    Application.DisplayAlerts = True													
+                End If													
+                													
+                ws.Copy After:=NewWorkbook.Sheets(NewWorkbook.Sheets.Count)													
+                Set copiedSheet = NewWorkbook.Sheets(NewWorkbook.Sheets.Count)													
+                ' It limits the name to 32 characters 													
+                copiedSheet.Name = NewSheetName													
+            Next i													
+        Next Key													
+        													
+        ' Remove any empty sheets from the new workbook													
+        Dim tmpWs As Worksheet													
+        For Each tmpWs In NewWorkbook.Worksheets													
+            If tmpWs.UsedRange.Cells.Count = 1 And tmpWs.Cells(1, 1).Value = "" Then													
+                Application.DisplayAlerts = False													
+                tmpWs.Delete													
+                Application.DisplayAlerts = True													
+            End If													
+        Next tmpWs													
+        ' Call CreateInsertQuarterlyLog(NewWorkbook) to insert the log data into the copied sheets													
+     Call CreateInsertQuarterlyLog(NewWorkbook)													
+        ' Set the file path and name for the XLSM													
+        FilePath = "D:\Worksheets Q1 Log Inserted and format\"													
+        FileName = "Quarterly " & SearchSheetContent & " division's Business Data" & ".xlsm"													
+        FullFilePath = FilePath & FileName													
+													
+        ' Delete the existing file (overwrite)													
+        If Dir(FullFilePath) <> "" Then													
+            On Error Resume Next													
+            Kill FullFilePath													
+            On Error GoTo 0													
+        End If													
+      													
+        ' Save new workbook as XLSM													
+        Application.DisplayAlerts = False													
+        NewWorkbook.SaveAs FileName:=FullFilePath, FileFormat:=xlOpenXMLWorkbookMacroEnabled													
+        Application.DisplayAlerts = True													
+													
+        ' Close the new workbook													
+        NewWorkbook.Close SaveChanges:=False													
+													
+        MsgBox "File saved successfully: " & FullFilePath, vbInformation, "Success"													
+    Else													
+        MsgBox "No sheets found for the selected region!", vbExclamation, "Warning"													
+        Exit Sub													
+    End If													
+End Sub													
