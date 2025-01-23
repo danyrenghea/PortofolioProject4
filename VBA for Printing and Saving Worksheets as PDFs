@@ -1,0 +1,112 @@
+Sub PrintSaveDivisionSheets()												
+    ' PrintSaveDivisionSheets Macro												
+    Dim ws As Worksheet												
+    Dim TempSheet As Worksheet												
+    Dim message As String												
+    Dim region As Variant												
+    Dim SearchSheetContent As String												
+    Dim FilePath As String												
+    Dim FileName As String												
+    Dim FullFilePath As String												
+    												
+    ' Delete the "Neutral" sheet if it exists												
+    On Error Resume Next												
+    Set ws = Sheets("Neutral")												
+    If Not ws Is Nothing Then												
+        Application.DisplayAlerts = False												
+        ws.Delete												
+        Application.DisplayAlerts = True												
+    End If												
+    On Error GoTo 0												
+												
+    ' Create the temporary "Neutral" sheet												
+    Set TempSheet = Sheets.Add												
+    TempSheet.Name = "Neutral"												
+    TempSheet.Activate												
+												
+    ' Define the message for region selection												
+    message = "Enter the Region of your choice:" & vbCrLf & _												
+              "1 - Southeast" & vbCrLf & _												
+              "2 - Northeast" & vbCrLf & _												
+              "3 - Mid-west" & vbCrLf & _												
+              "4 - Southwest" & vbCrLf & _												
+              "5 - Northwest" & vbCrLf & _												
+              "6 - Far-west"												
+												
+TryAgain:   ' Label for re-entering input in case of invalid input												
+    region = InputBox(message, "Region", "Enter 1, 2, 3, 4, 5, or 6")												
+												
+    ' Check if the user pressed Cancel												
+    If StrPtr(region) = 0 Then												
+        MsgBox "You pressed Cancel. Operation aborted!", vbExclamation, "Cancelled"												
+        Exit Sub												
+    End If												
+												
+    ' Check if the input is empty												
+    If Trim(region) = "" Then												
+        MsgBox "You pressed OK but left the input empty.", vbInformation, "No Input"												
+        GoTo TryAgain												
+    End If												
+												
+    ' Check if the input is a valid number between 1 and 6												
+    If Not IsNumeric(region) Or region < 1 Or region > 6 Then												
+        MsgBox "Invalid input. Please enter a number between 1 and 6.", vbCritical, "Error"												
+        GoTo TryAgain												
+    End If												
+												
+    ' Convert the "region" variable to an integer												
+    region = CInt(region)												
+												
+    ' Set the search content based on the selected region												
+    Select Case region												
+        Case 1												
+            MsgBox "You selected Southeast.", vbInformation, "Selection"												
+            SearchSheetContent = "SE"												
+        Case 2												
+            MsgBox "You selected Northeast.", vbInformation, "Selection"												
+            SearchSheetContent = "NE"												
+        Case 3												
+            MsgBox "You selected Mid-west.", vbInformation, "Selection"												
+            SearchSheetContent = "MW"												
+        Case 4												
+            MsgBox "You selected Southwest.", vbInformation, "Selection"												
+            SearchSheetContent = "SW"												
+        Case 5												
+            MsgBox "You selected Northwest.", vbInformation, "Selection"												
+            SearchSheetContent = "NW"												
+        Case 6												
+            MsgBox "You selected Far-west.", vbInformation, "Selection"												
+            SearchSheetContent = "FW"												
+    End Select												
+												
+    ' Select the worksheets corresponding to the selected region												
+    For Each ws In ThisWorkbook.Worksheets												
+        If InStr(1, ws.Name, SearchSheetContent, vbTextCompare) > 0 Then												
+            ws.Select False ' Multi-selection												
+        End If												
+    Next ws												
+												
+    ' Check if there are selected sheets to avoid errors												
+    If ActiveWindow.SelectedSheets.Count > 0 Then												
+        ' Set the file path and name for the PDF												
+        FilePath = "D:\Printed Worksheets Saved\"												
+        FileName = SearchSheetContent & " Division's Business Data" & ".pdf"												
+        FullFilePath = FilePath & FileName												
+												
+        ' Delete the existing PDF file (overwrite)												
+        If Dir(FullFilePath) <> "" Then Kill FullFilePath												
+												
+        ' Save the selected worksheets as a PDF in the desired folder												
+        ActiveSheet.ExportAsFixedFormat Type:=xlTypePDF, _												
+            FileName:=FullFilePath, _												
+            Quality:=xlQualityStandard, _												
+            IncludeDocProperties:=True, _												
+            IgnorePrintAreas:=False, _												
+            OpenAfterPublish:=False												
+												
+        MsgBox "File saved successfully: " & FullFilePath, vbInformation, "Success"												
+												
+    Else												
+        MsgBox "No worksheets found matching: " & SearchSheetContent, vbExclamation, "No Match Found"												
+    End If												
+End Sub												
