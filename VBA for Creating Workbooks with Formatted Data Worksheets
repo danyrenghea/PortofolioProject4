@@ -96,7 +96,7 @@ TryAgain:
         Case 6: SearchSheetContent = "FW"													
     End Select													
   For Each ws In ThisWorkbook.Worksheets													
-    ' Check if the worksheet name începe exact cu denumirea regiunii													
+    ' Check if the worksheet name start exactly with the region name 													
     If StrComp(Left(ws.Name, Len(SearchSheetContent)), SearchSheetContent, vbTextCompare) = 0 And ws.Name <> "Neutral" Then													
         ' Add the worksheet in the list of the selected ones													
         SelectedSheets.Add ws.Name, ws													
@@ -138,7 +138,7 @@ Next ws
             End If													
         Next tmpWs													
         ' Call CreateInsertQuarterlyLog(NewWorkbook) to insert the log data into the copied sheets													
-     Call CreateInsertQuarterlyLog(NewWorkbook)													
+      Call CreateInsertQuarterlyLog(NewWorkbook)													
         ' Set the file path and name for the XLSM													
         FilePath = "D:\Worksheets Q1 Log Inserted and format\"													
         FileName = "Quarterly " & SearchSheetContent & " division's Business Data" & ".xlsm"													
